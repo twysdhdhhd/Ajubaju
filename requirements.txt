@@ -1,5 +1,4 @@
 Flask
 requests
-lottie
-Pillow
+manim
 ffmpeg-python
