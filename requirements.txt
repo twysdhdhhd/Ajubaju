@@ -1,3 +1,5 @@
 Flask
 requests
-moviepy
+py-lottie
+Pillow
+ffmpeg-python
