@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import os
 import requests
 import uuid
-from py_lottie import load
+from lottie import objects, parse
 from PIL import Image
 import ffmpeg
 
@@ -17,16 +17,17 @@ def render_lottie_to_images(lottie_url):
     if response.status_code != 200:
         raise Exception("Failed to fetch Lottie JSON.")
     
-    # Load the Lottie animation
-    lottie_data = load(response.json())
-
+    # Parse the Lottie JSON
+    lottie_data = parse.parse_json(response.text)
+    
     # Render frames from the animation
     frame_paths = []
     num_frames = 60  # Adjust as needed for frame count or duration
-
+    
+    # Lottie rendering logic (you might need to implement your own frame rendering method here)
     for frame in range(num_frames):
-        # Render the frame (just an example, adjust this for actual frame rendering)
-        frame_image = lottie_data.render_frame(frame / num_frames)  # Adjust frame based on time or position
+        # Dummy frame rendering (replace with actual frame extraction logic)
+        frame_image = Image.new('RGBA', (500, 500), (255, 255, 255, 255))  # Placeholder for rendering
         image_path = os.path.join(OUTPUT_DIR, f"frame_{frame}.png")
         frame_paths.append(image_path)
         frame_image.save(image_path)
