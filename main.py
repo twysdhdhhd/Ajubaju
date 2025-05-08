@@ -1,43 +1,47 @@
-from flask import Flask, request, jsonify
 import os
 import requests
 import uuid
-from lottie import objects, parse
-from PIL import Image
-import ffmpeg
+from flask import Flask, request, jsonify
+from manim import *
 
+# Set up Flask app
 app = Flask(__name__)
 
+# Directory to store rendered videos
 OUTPUT_DIR = "./rendered_videos"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def render_lottie_to_images(lottie_url):
-    # Fetch the Lottie JSON file
+    # Step 1: Fetch the Lottie JSON
     response = requests.get(lottie_url)
     if response.status_code != 200:
         raise Exception("Failed to fetch Lottie JSON.")
+
+    # Step 2: Save the Lottie JSON to a temporary file
+    lottie_json_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.json")
+    with open(lottie_json_path, 'w') as f:
+        f.write(response.text)
     
-    # Parse the Lottie JSON
-    lottie_data = parse.parse_json(response.text)
+    # Step 3: Render the Lottie animation using Manim
+    # You may need to adjust this part to suit your Lottie JSON and animation
+    frame_dir = os.path.join(OUTPUT_DIR, "frames")
+    os.makedirs(frame_dir, exist_ok=True)
     
-    # Render frames from the animation
-    frame_paths = []
-    num_frames = 60  # Adjust as needed for frame count or duration
+    # Manim command to render Lottie JSON frames (adjust this according to how Lottie should be rendered)
+    command = f"manim -pql --disable_caching {lottie_json_path} --frame_width=500 --frame_height=500"
     
-    # Lottie rendering logic (you might need to implement your own frame rendering method here)
-    for frame in range(num_frames):
-        # Dummy frame rendering (replace with actual frame extraction logic)
-        frame_image = Image.new('RGBA', (500, 500), (255, 255, 255, 255))  # Placeholder for rendering
-        image_path = os.path.join(OUTPUT_DIR, f"frame_{frame}.png")
-        frame_paths.append(image_path)
-        frame_image.save(image_path)
+    # Run the command to generate frames using Manim
+    os.system(command)
+
+    # Return the list of rendered frames
+    frame_paths = [os.path.join(frame_dir, f"frame_{i}.png") for i in range(len(os.listdir(frame_dir)))]
     
     return frame_paths
 
 def convert_images_to_mp4(frame_paths):
-    # Use ffmpeg to convert image sequence to MP4
+    # Step 4: Use ffmpeg to create a video from frames
     mp4_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.mp4")
-    ffmpeg.input('frame_%d.png', framerate=24).output(mp4_path).run()
+    ffmpeg.input('frames/frame_%d.png', framerate=24).output(mp4_path).run()
     return mp4_path
 
 @app.route('/convert', methods=['POST'])
