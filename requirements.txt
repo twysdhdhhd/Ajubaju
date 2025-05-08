@@ -3,3 +3,4 @@ requests
 manim
 ffmpeg-python
 lottie
+Pillow
