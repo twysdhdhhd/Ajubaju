@@ -3,6 +3,7 @@ import requests
 import uuid
 from flask import Flask, request, jsonify
 from manim import *
+import ffmpeg
 
 # Set up Flask app
 app = Flask(__name__)
