@@ -3,8 +3,8 @@ import requests
 import uuid
 from flask import Flask, request, jsonify, send_from_directory
 import time
-from lottie import objects, parse
 from PIL import Image, ImageDraw
+import json
 
 # Set up Flask app
 app = Flask(__name__)
@@ -39,16 +39,29 @@ def render_lottie_to_images(lottie_url):
     os.makedirs(FRAME_DIR, exist_ok=True)
 
     # Load Lottie JSON
-    animation = parse.load(lottie_json_path)
-    duration = int(animation.duration * 30)  # Assuming 30 FPS
-    width, height = 500, 500  # Set your frame size
+    with open(lottie_json_path, 'r') as f:
+        lottie_data = json.load(f)
 
+    width, height = 500, 500  # Frame size (adjustable)
+    duration = 30  # Number of frames (adjustable)
+    
     for frame_number in range(duration):
         frame_image = os.path.join(FRAME_DIR, f"frame_{frame_number}.png")
         frame = Image.new("RGBA", (width, height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(frame)
-        # This is a basic placeholder - render your Lottie frames here
-        draw.text((width//2 - 50, height//2), f"Frame {frame_number}", fill=(0, 0, 0))
+        
+        # Simple Lottie frame simulation (you can improve this)
+        draw.text((width // 2 - 50, height // 2), f"Frame {frame_number}", fill=(0, 0, 0))
+
+        # Basic shape drawing (replace with Lottie data parsing)
+        for layer in lottie_data.get("layers", []):
+            if layer.get("ty") == 4:  # Shape layer
+                draw.ellipse(
+                    [(100, 100), (200, 200)],
+                    fill=(255, 0, 0, 128),
+                    outline="black"
+                )
+        
         frame.save(frame_image)
 
     if len(os.listdir(FRAME_DIR)) == 0:
