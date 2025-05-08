@@ -2,3 +2,4 @@ Flask
 requests
 manim
 ffmpeg-python
+lottie
