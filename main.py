@@ -1,8 +1,8 @@
 import os
 import requests
 import uuid
-from flask import Flask, request, jsonify
-from manim import *
+from flask import Flask, request, jsonify, send_from_directory
+import time
 
 # Set up Flask app
 app = Flask(__name__)
@@ -12,36 +12,42 @@ OUTPUT_DIR = "./rendered_videos"
 FRAME_DIR = os.path.join(OUTPUT_DIR, "frames")
 os.makedirs(FRAME_DIR, exist_ok=True)
 
+def cleanup_old_videos():
+    """Automatically delete videos older than 1 minute."""
+    current_time = time.time()
+    for filename in os.listdir(OUTPUT_DIR):
+        file_path = os.path.join(OUTPUT_DIR, filename)
+        if os.path.isfile(file_path):
+            file_age = current_time - os.path.getmtime(file_path)
+            if file_age > 60:  # 1 minute (60 seconds)
+                os.remove(file_path)
+                print(f"Deleted old video: {filename}")
+
 def render_lottie_to_images(lottie_url):
-    # Step 1: Fetch the Lottie JSON
+    """Download Lottie JSON and render it to frames."""
     response = requests.get(lottie_url)
     if response.status_code != 200:
         raise Exception("Failed to fetch Lottie JSON.")
 
-    # Step 2: Save the Lottie JSON to a temporary file
     lottie_json_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.json")
     with open(lottie_json_path, 'w') as f:
         f.write(response.text)
     
-    # Step 3: Render the Lottie animation using Manim
     print("Rendering Lottie frames...")
     os.makedirs(FRAME_DIR, exist_ok=True)
     
-    # Manim command to render Lottie JSON frames (you can customize this)
-    # You can replace this with a proper Lottie frame rendering process
-    for i in range(30):  # Simulate 30 frames (adjust as needed)
+    # Placeholder frame rendering (replace with real rendering)
+    for i in range(30):  # Simulate 30 frames
         frame_image = os.path.join(FRAME_DIR, f"frame_{i}.png")
         os.system(f"convert -size 500x500 xc:white {frame_image}")  # Placeholder (white image)
     
-    # Verify frames are generated
-    frame_count = len(os.listdir(FRAME_DIR))
-    if frame_count == 0:
+    if len(os.listdir(FRAME_DIR)) == 0:
         raise Exception("No frames generated. Frame rendering failed.")
 
-    print(f"Generated {frame_count} frames.")
-    return FRAME_DIR
+    print("Frames rendered successfully.")
 
 def convert_images_to_mp4():
+    """Convert rendered frames to an MP4 using ffmpeg."""
     print("Converting frames to MP4...")
     mp4_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.mp4")
     
@@ -49,10 +55,8 @@ def convert_images_to_mp4():
     command = f"ffmpeg -framerate 24 -i {FRAME_DIR}/frame_%d.png -pix_fmt yuv420p {mp4_path} -y"
     print("Running FFmpeg Command:", command)
     
-    result = os.system(command)
-    print("FFmpeg Result Code:", result)
+    os.system(command)
     
-    # Check if MP4 was created
     if not os.path.exists(mp4_path):
         raise Exception("FFmpeg failed to create MP4. Check frame directory and ffmpeg command.")
     
@@ -61,6 +65,9 @@ def convert_images_to_mp4():
 
 @app.route('/convert', methods=['POST'])
 def convert_lottie_to_mp4():
+    """Convert a Lottie JSON URL to an MP4 file."""
+    cleanup_old_videos()  # Clean up old videos before creating a new one
+    
     data = request.get_json()
     lottie_url = data.get('lottie_url')
 
@@ -83,6 +90,11 @@ def convert_lottie_to_mp4():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/rendered_videos/<filename>')
+def serve_video(filename):
+    """Serve rendered MP4 videos."""
+    return send_from_directory(OUTPUT_DIR, filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
