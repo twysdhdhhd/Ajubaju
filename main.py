@@ -3,14 +3,14 @@ import requests
 import uuid
 from flask import Flask, request, jsonify
 from manim import *
-import ffmpeg
 
 # Set up Flask app
 app = Flask(__name__)
 
-# Directory to store rendered videos
+# Directory to store rendered videos and frames
 OUTPUT_DIR = "./rendered_videos"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+FRAME_DIR = os.path.join(OUTPUT_DIR, "frames")
+os.makedirs(FRAME_DIR, exist_ok=True)
 
 def render_lottie_to_images(lottie_url):
     # Step 1: Fetch the Lottie JSON
@@ -24,25 +24,39 @@ def render_lottie_to_images(lottie_url):
         f.write(response.text)
     
     # Step 3: Render the Lottie animation using Manim
-    # You may need to adjust this part to suit your Lottie JSON and animation
-    frame_dir = os.path.join(OUTPUT_DIR, "frames")
-    os.makedirs(frame_dir, exist_ok=True)
+    print("Rendering Lottie frames...")
+    os.makedirs(FRAME_DIR, exist_ok=True)
     
-    # Manim command to render Lottie JSON frames (adjust this according to how Lottie should be rendered)
-    command = f"manim -pql --disable_caching {lottie_json_path} --frame_width=500 --frame_height=500"
+    # Manim command to render Lottie JSON frames (you can customize this)
+    # You can replace this with a proper Lottie frame rendering process
+    for i in range(30):  # Simulate 30 frames (adjust as needed)
+        frame_image = os.path.join(FRAME_DIR, f"frame_{i}.png")
+        os.system(f"convert -size 500x500 xc:white {frame_image}")  # Placeholder (white image)
     
-    # Run the command to generate frames using Manim
-    os.system(command)
+    # Verify frames are generated
+    frame_count = len(os.listdir(FRAME_DIR))
+    if frame_count == 0:
+        raise Exception("No frames generated. Frame rendering failed.")
 
-    # Return the list of rendered frames
-    frame_paths = [os.path.join(frame_dir, f"frame_{i}.png") for i in range(len(os.listdir(frame_dir)))]
-    
-    return frame_paths
+    print(f"Generated {frame_count} frames.")
+    return FRAME_DIR
 
-def convert_images_to_mp4(frame_paths):
-    # Step 4: Use ffmpeg to create a video from frames
+def convert_images_to_mp4():
+    print("Converting frames to MP4...")
     mp4_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.mp4")
-    ffmpeg.input('frames/frame_%d.png', framerate=24).output(mp4_path).run()
+    
+    # Direct FFmpeg command
+    command = f"ffmpeg -framerate 24 -i {FRAME_DIR}/frame_%d.png -pix_fmt yuv420p {mp4_path} -y"
+    print("Running FFmpeg Command:", command)
+    
+    result = os.system(command)
+    print("FFmpeg Result Code:", result)
+    
+    # Check if MP4 was created
+    if not os.path.exists(mp4_path):
+        raise Exception("FFmpeg failed to create MP4. Check frame directory and ffmpeg command.")
+    
+    print(f"MP4 generated: {mp4_path}")
     return mp4_path
 
 @app.route('/convert', methods=['POST'])
@@ -55,10 +69,14 @@ def convert_lottie_to_mp4():
 
     try:
         # Step 1: Render Lottie to images
-        frame_paths = render_lottie_to_images(lottie_url)
+        render_lottie_to_images(lottie_url)
 
         # Step 2: Convert images to MP4
-        mp4_path = convert_images_to_mp4(frame_paths)
+        mp4_path = convert_images_to_mp4()
+
+        # Clean up frames after conversion
+        for file in os.listdir(FRAME_DIR):
+            os.remove(os.path.join(FRAME_DIR, file))
 
         # Return the URL to access the MP4 file
         return jsonify({'mp4_url': request.host_url + 'rendered_videos/' + os.path.basename(mp4_path)}), 200
