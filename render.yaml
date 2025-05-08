@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: lottie-to-mp4-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    plan: free
+    envVars:
+      - key: FLASK_APP
+        value: main.py
+    systemPackages:
+      - ffmpeg
