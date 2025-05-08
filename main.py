@@ -3,6 +3,8 @@ import requests
 import uuid
 from flask import Flask, request, jsonify, send_from_directory
 import time
+from lottie import objects, parse
+from PIL import Image, ImageDraw
 
 # Set up Flask app
 app = Flask(__name__)
@@ -32,15 +34,23 @@ def render_lottie_to_images(lottie_url):
     lottie_json_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.json")
     with open(lottie_json_path, 'w') as f:
         f.write(response.text)
-    
+
     print("Rendering Lottie frames...")
     os.makedirs(FRAME_DIR, exist_ok=True)
-    
-    # Placeholder frame rendering (replace with real rendering)
-    for i in range(30):  # Simulate 30 frames
-        frame_image = os.path.join(FRAME_DIR, f"frame_{i}.png")
-        os.system(f"convert -size 500x500 xc:white {frame_image}")  # Placeholder (white image)
-    
+
+    # Load Lottie JSON
+    animation = parse.load(lottie_json_path)
+    duration = int(animation.duration * 30)  # Assuming 30 FPS
+    width, height = 500, 500  # Set your frame size
+
+    for frame_number in range(duration):
+        frame_image = os.path.join(FRAME_DIR, f"frame_{frame_number}.png")
+        frame = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(frame)
+        # This is a basic placeholder - render your Lottie frames here
+        draw.text((width//2 - 50, height//2), f"Frame {frame_number}", fill=(0, 0, 0))
+        frame.save(frame_image)
+
     if len(os.listdir(FRAME_DIR)) == 0:
         raise Exception("No frames generated. Frame rendering failed.")
 
@@ -52,7 +62,7 @@ def convert_images_to_mp4():
     mp4_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.mp4")
     
     # Direct FFmpeg command
-    command = f"ffmpeg -framerate 24 -i {FRAME_DIR}/frame_%d.png -pix_fmt yuv420p {mp4_path} -y"
+    command = f"ffmpeg -framerate 30 -i {FRAME_DIR}/frame_%d.png -pix_fmt yuv420p {mp4_path} -y"
     print("Running FFmpeg Command:", command)
     
     os.system(command)
