@@ -16,6 +16,18 @@ OUTPUT_DIR = "./rendered_videos"
 FRAME_DIR = os.path.join(OUTPUT_DIR, "frames")
 os.makedirs(FRAME_DIR, exist_ok=True)
 
+# Download and use a portable version of Chromium
+CHROMIUM_PATH = "/opt/render/project/.chromium/chrome-linux/chrome"
+
+def setup_chromium():
+    """Ensure Chromium is downloaded and available."""
+    if not os.path.exists(CHROMIUM_PATH):
+        os.makedirs("/opt/render/project/.chromium/chrome-linux", exist_ok=True)
+        print("Downloading Chromium...")
+        os.system("wget https://commondatastorage.googleapis.com/chromium-browser-snapshots/Linux_x64/1058845/chrome-linux.zip -O /opt/render/project/.chromium/chrome-linux.zip")
+        os.system("unzip /opt/render/project/.chromium/chrome-linux.zip -d /opt/render/project/.chromium/")
+        print("Chromium downloaded.")
+
 def cleanup_old_videos():
     """Automatically delete videos older than 1 minute."""
     current_time = time.time()
@@ -31,13 +43,15 @@ def render_lottie_to_images(lottie_url):
     """Download and render Lottie JSON directly from the URL using headless Chrome."""
     print("Rendering Lottie frames...")
     os.makedirs(FRAME_DIR, exist_ok=True)
+    setup_chromium()  # Ensure Chromium is available
 
-    # Set up headless Chrome
+    # Set up headless Chrome with custom path
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=500,500")
+    chrome_options.binary_location = CHROMIUM_PATH
     
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
     driver.get(lottie_url)
