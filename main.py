@@ -3,8 +3,10 @@ import requests
 import uuid
 from flask import Flask, request, jsonify, send_from_directory
 import time
-from PIL import Image, ImageDraw
-import json
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 
 # Set up Flask app
 app = Flask(__name__)
@@ -26,47 +28,27 @@ def cleanup_old_videos():
                 print(f"Deleted old video: {filename}")
 
 def render_lottie_to_images(lottie_url):
-    """Download Lottie JSON and render it to frames."""
-    response = requests.get(lottie_url)
-    if response.status_code != 200:
-        raise Exception("Failed to fetch Lottie JSON.")
-
-    lottie_json_path = os.path.join(OUTPUT_DIR, f"{uuid.uuid4()}.json")
-    with open(lottie_json_path, 'w') as f:
-        f.write(response.text)
-
+    """Download and render Lottie JSON directly from the URL using headless Chrome."""
     print("Rendering Lottie frames...")
     os.makedirs(FRAME_DIR, exist_ok=True)
 
-    # Load Lottie JSON
-    with open(lottie_json_path, 'r') as f:
-        lottie_data = json.load(f)
-
-    width, height = 500, 500  # Frame size (adjustable)
-    duration = 30  # Number of frames (adjustable)
+    # Set up headless Chrome
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--window-size=500,500")
     
-    for frame_number in range(duration):
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+    driver.get(lottie_url)
+    
+    frame_count = 30  # Capture 30 frames (adjust as needed)
+    for frame_number in range(frame_count):
         frame_image = os.path.join(FRAME_DIR, f"frame_{frame_number}.png")
-        frame = Image.new("RGBA", (width, height), (255, 255, 255, 0))
-        draw = ImageDraw.Draw(frame)
-        
-        # Simple Lottie frame simulation (you can improve this)
-        draw.text((width // 2 - 50, height // 2), f"Frame {frame_number}", fill=(0, 0, 0))
-
-        # Basic shape drawing (replace with Lottie data parsing)
-        for layer in lottie_data.get("layers", []):
-            if layer.get("ty") == 4:  # Shape layer
-                draw.ellipse(
-                    [(100, 100), (200, 200)],
-                    fill=(255, 0, 0, 128),
-                    outline="black"
-                )
-        
-        frame.save(frame_image)
-
-    if len(os.listdir(FRAME_DIR)) == 0:
-        raise Exception("No frames generated. Frame rendering failed.")
-
+        driver.save_screenshot(frame_image)
+        print(f"Captured frame {frame_number + 1}/{frame_count}")
+    
+    driver.quit()
     print("Frames rendered successfully.")
 
 def convert_images_to_mp4():
