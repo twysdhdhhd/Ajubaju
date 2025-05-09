@@ -1,8 +1,2 @@
 Flask
 requests
-manim
-ffmpeg-python
-lottie
-Pillow
-webdriver-manager
-selenium
